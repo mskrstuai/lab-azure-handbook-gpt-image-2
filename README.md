@@ -5,7 +5,7 @@ gpt-image-2 이미지 생성/편집과, Imagen 3 · Gemini 마스크를 gpt-imag
 ## 설치
 
 ```bash
-pip install openai pillow
+pip install -r requirements.txt
 export OPENAI_API_KEY="sk-..."
 # Azure OpenAI 사용 시:
 # export OPENAI_BASE_URL="https://<resource>.openai.azure.com/openai/v1/"
