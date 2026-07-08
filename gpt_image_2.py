@@ -2,16 +2,14 @@
 
 준비:
     pip install openai pillow
-    export OPENAI_API_KEY="sk-..."          # 공용 OpenAI
-    # 또는 Azure OpenAI:
-    # export OPENAI_API_KEY="<azure-key>"
-    # export OPENAI_BASE_URL="https://<resource>.openai.azure.com/openai/v1/"
 
-실행 (모든 인자에 default 있음):
-    python gpt_image_2.py                                  # generate (기본)
-    python gpt_image_2.py generate --prompt "a red car"    # 프롬프트로 생성
-    python gpt_image_2.py edit                             # 000122.jpg 편집
-    python gpt_image_2.py edit --image my.jpg --mask my-mask.png --prompt "..."
+API 키/엔드포인트는 환경변수 없이 인자로 직접 넘긴다:
+    python gpt_image_2.py --api-key sk-...                       # 공용 OpenAI, generate
+    python gpt_image_2.py generate --api-key sk-... --prompt "a red car"
+    python gpt_image_2.py edit --api-key sk-... --image my.jpg --mask my-mask.png
+    # Azure OpenAI:
+    python gpt_image_2.py --api-key <azure-key> \\
+        --base-url https://<resource>.openai.azure.com/openai/v1/
 """
 
 import argparse
@@ -22,9 +20,12 @@ from openai import OpenAI
 MODEL = "gpt-image-2"
 
 
-def get_client() -> OpenAI:
-    """OPENAI_API_KEY / OPENAI_BASE_URL 환경변수로 클라이언트 생성 (지연)."""
-    return OpenAI()
+def get_client(api_key: str, base_url: str | None = None) -> OpenAI:
+    """인자로 받은 키/엔드포인트로 클라이언트 생성 (환경변수 미사용).
+
+    base_url 을 주면 Azure OpenAI 등 커스텀 엔드포인트로 향한다.
+    """
+    return OpenAI(api_key=api_key, base_url=base_url)
 
 
 def save(b64: str, path: str) -> None:
@@ -33,9 +34,10 @@ def save(b64: str, path: str) -> None:
         f.write(base64.b64decode(b64))
 
 
-def generate(prompt: str, out_path: str = "generated.png") -> str:
+def generate(client: OpenAI, prompt: str,
+             out_path: str = "generated.png") -> str:
     """프롬프트로 이미지 생성."""
-    result = get_client().images.generate(
+    result = client.images.generate(
         model=MODEL,
         prompt=prompt,
         size="1024x1024",
@@ -44,7 +46,7 @@ def generate(prompt: str, out_path: str = "generated.png") -> str:
     return out_path
 
 
-def edit(prompt: str, image_path: str, mask_path: str,
+def edit(client: OpenAI, prompt: str, image_path: str, mask_path: str,
          out_path: str = "edited.png") -> str:
     """마스크 영역만 편집.
 
@@ -53,7 +55,7 @@ def edit(prompt: str, image_path: str, mask_path: str,
     convert_mask.py 로 먼저 변환할 것.
     """
     with open(image_path, "rb") as image, open(mask_path, "rb") as mask:
-        result = get_client().images.edit(
+        result = client.images.edit(
             model=MODEL,
             image=image,
             mask=mask,
@@ -82,15 +84,25 @@ def main() -> None:
         help="Imagen/Gemini 스타일 마스크 (흰색=편집, edit 시 자동 변환)",
     )
     parser.add_argument("--out", default=None, help="출력 경로")
+    parser.add_argument(
+        "--api-key", required=True, help="OpenAI/Azure API 키 (환경변수 미사용)",
+    )
+    parser.add_argument(
+        "--base-url", default=None,
+        help="커스텀 엔드포인트 (예: Azure OpenAI). 미지정 시 공용 OpenAI",
+    )
     args = parser.parse_args()
 
+    client = get_client(args.api_key, args.base_url)
+
     if args.task == "generate":
-        out = generate(args.prompt, args.out or "generated.png")
+        out = generate(client, args.prompt, args.out or "generated.png")
     else:
         # Imagen/Gemini 마스크를 gpt-image-2 규격(투명=편집)으로 변환 후 편집
         from convert_mask import convert_mask
         gpt_mask = convert_mask(args.mask, "mask-gpt.png")
-        out = edit(args.prompt, args.image, gpt_mask, args.out or "edited.png")
+        out = edit(client, args.prompt, args.image, gpt_mask,
+                   args.out or "edited.png")
 
     print(f"saved: {out}")
 

@@ -6,20 +6,21 @@ gpt-image-2 이미지 생성/편집과, Imagen 3 · Gemini 마스크를 gpt-imag
 
 ```bash
 pip install -r requirements.txt
-export OPENAI_API_KEY="sk-..."
-# Azure OpenAI 사용 시:
-# export OPENAI_BASE_URL="https://<resource>.openai.azure.com/openai/v1/"
 ```
 
-테스트 이미지 `000122.jpg`(원본), `000122-mask.png`(Imagen 스타일, 흰색=편집) 포함. 모든 CLI 인자에 default 가 있어 인자 없이도 실행된다.
+API 키/엔드포인트는 환경변수 없이 `--api-key`, `--base-url` 인자로 넘긴다. 테스트 이미지 `000122.jpg`(원본), `000122-mask.png`(Imagen 스타일, 흰색=편집) 포함.
 
 ## 1. 이미지 생성 · 편집 — `gpt_image_2.py`
 
 ```bash
-python gpt_image_2.py                                   # generate (기본 프롬프트)
-python gpt_image_2.py generate --prompt "a red sports car"
-python gpt_image_2.py edit                              # 000122.jpg + 000122-mask.png
-python gpt_image_2.py edit --image my.jpg --mask my-mask.png --prompt "fill naturally"
+python gpt_image_2.py --api-key sk-...                                    # generate
+python gpt_image_2.py generate --api-key sk-... --prompt "a red sports car"
+python gpt_image_2.py edit --api-key sk-...                               # 000122.jpg + 000122-mask.png
+python gpt_image_2.py edit --api-key sk-... --image my.jpg --mask my-mask.png --prompt "fill naturally"
+
+# Azure OpenAI: --base-url 로 엔드포인트 지정
+python gpt_image_2.py --api-key <azure-key> \
+    --base-url https://<resource>.openai.azure.com/openai/v1/
 ```
 
 `edit` 는 넘긴 Imagen/Gemini 마스크를 자동으로 gpt-image-2 규격으로 변환한 뒤 편집한다.
