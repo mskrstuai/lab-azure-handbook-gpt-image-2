@@ -1,0 +1,1 @@
+# lab-azure-handbook-gpt-image-2
