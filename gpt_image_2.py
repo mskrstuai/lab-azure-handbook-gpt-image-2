@@ -3,10 +3,14 @@
 준비:
     pip install openai pillow
 
-API 키/엔드포인트는 환경변수 없이 인자로 직접 넘긴다:
-    python gpt_image_2.py --api-key sk-...                       # 공용 OpenAI, generate
-    python gpt_image_2.py generate --api-key sk-... --prompt "a red car"
-    python gpt_image_2.py edit --api-key sk-... --image my.jpg --mask my-mask.png
+API 키/엔드포인트는 환경변수 없이 인자로 직접 넘긴다 (--api-key, --base-url 필수):
+    python gpt_image_2.py --api-key sk-... --base-url https://api.openai.com/v1/
+    python gpt_image_2.py generate --api-key sk-... --base-url <url> --prompt "a red car"
+    # edit 의 --mask 는 gpt-image-2 마스크(투명=편집). Imagen/Gemini 마스크는
+    # convert_mask.py 로 먼저 변환한다:
+    python convert_mask.py input-mask.png --out input-mask-gpt.png
+    python gpt_image_2.py edit --api-key sk-... --base-url <url> \\
+        --image my.jpg --mask input-mask-gpt.png
     # Azure OpenAI:
     python gpt_image_2.py --api-key <azure-key> \\
         --base-url https://<resource>.openai.azure.com/openai/v1/
@@ -77,19 +81,19 @@ def main() -> None:
         help="생성/편집 프롬프트",
     )
     parser.add_argument(
-        "--image", default="000122.jpg", help="편집할 입력 이미지 (edit)",
+        "--image", default="input.jpg", help="편집할 입력 이미지 (edit)",
     )
     parser.add_argument(
-        "--mask", default="000122-mask.png",
-        help="Imagen/Gemini 스타일 마스크 (흰색=편집, edit 시 자동 변환)",
+        "--mask", default="input-mask-gpt.png",
+        help="gpt-image-2 마스크 (투명=편집). convert_mask.py 로 변환한 파일",
     )
     parser.add_argument("--out", default=None, help="출력 경로")
     parser.add_argument(
         "--api-key", required=True, help="OpenAI/Azure API 키 (환경변수 미사용)",
     )
     parser.add_argument(
-        "--base-url", default=None,
-        help="커스텀 엔드포인트 (예: Azure OpenAI). 미지정 시 공용 OpenAI",
+        "--base-url", required=True,
+        help="API 엔드포인트 (공용 OpenAI 또는 Azure OpenAI)",
     )
     args = parser.parse_args()
 
@@ -98,10 +102,9 @@ def main() -> None:
     if args.task == "generate":
         out = generate(client, args.prompt, args.out or "generated.png")
     else:
-        # Imagen/Gemini 마스크를 gpt-image-2 규격(투명=편집)으로 변환 후 편집
-        from convert_mask import convert_mask
-        gpt_mask = convert_mask(args.mask, "mask-gpt.png")
-        out = edit(client, args.prompt, args.image, gpt_mask,
+        # --mask 는 이미 gpt-image-2 규격(투명=편집)이어야 한다.
+        # Imagen/Gemini 마스크라면 convert_mask.py 로 먼저 변환할 것.
+        out = edit(client, args.prompt, args.image, args.mask,
                    args.out or "edited.png")
 
     print(f"saved: {out}")

@@ -9,10 +9,12 @@
 준비:
     pip install pillow
 
+src 는 png/jpg 모두 가능하며, 출력은 항상 gpt-image-2 규격의 png 다.
+
 실행 (모든 인자에 default 있음):
-    python convert_mask.py                                   # 000122-mask.png 변환
-    python convert_mask.py my-mask.png --out my-mask-gpt.png
-    python convert_mask.py my-mask.png --threshold 128
+    python convert_mask.py                                   # gcp 마스크 -> gpt 마스크(png)
+    python convert_mask.py my-mask-gcp.jpg --out my-mask-gpt.png
+    python convert_mask.py my-mask-gcp.png --threshold 128
 """
 
 import argparse
@@ -23,12 +25,7 @@ from PIL import Image
 THRESHOLD = 128
 
 
-def convert_mask(src_path: str, out_path: str = "mask-gpt.png",
-                 threshold: int = THRESHOLD) -> str:
-    """Imagen/Gemini 마스크(흰=편집)를 gpt-image-2 마스크(투명=편집)로 변환.
-
-    반환: 저장한 RGBA PNG 경로.
-    """
+def convert_mask(src_path: str, out_path: str, threshold: int) -> str:
     gray = Image.open(src_path).convert("L")
 
     # 편집 영역이면 alpha=0(투명), 유지 영역이면 alpha=255(불투명).
@@ -42,19 +39,27 @@ def convert_mask(src_path: str, out_path: str = "mask-gpt.png",
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Imagen3/Gemini 마스크 -> gpt-image-2 마스크 변환")
-    parser.add_argument(
-        "src", nargs="?", default="000122-mask.png",
-        help="입력 마스크 (Imagen/Gemini, 흰색=편집). 기본: 000122-mask.png",
+        description="Imagen3/Gemini 마스크 -> gpt-image-2 마스크 변환",
     )
     parser.add_argument(
-        "--out", default="000122-mask-gpt.png", help="출력 RGBA PNG 경로",
+        "src",
+        nargs="?",
+        default="input-mask-gcp.png",
+        help="입력 Imagen/Gemini 마스크 파일 경로. 기본: input-mask-gcp.png",
     )
     parser.add_argument(
-        "--threshold", type=int, default=THRESHOLD,
+        "--out",
+        default="input-mask-gpt.png",
+        help="출력 gpt-image-2 마스크 파일 경로",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=THRESHOLD,
         help=f"편집 영역 판정 임계값 0-255 (기본: {THRESHOLD})",
     )
     args = parser.parse_args()
 
+    # src 는 png/jpg 모두 가능하며, 출력은 항상 gpt-image-2 규격의 png 다.
     out = convert_mask(args.src, args.out, args.threshold)
     print(f"saved: {out}")
