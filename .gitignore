@@ -5,3 +5,6 @@ __pycache__/
 generated.png
 *-gpt.png
 *-edited.png
+input-resized.*
+input-mask-gpt-resized.*
+input-mask-gpt.png
