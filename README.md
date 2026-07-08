@@ -63,6 +63,8 @@ gpt-image-2 는 지원하는 크기 규칙이 있어, 입력 이미지와 마스
 ```bash
 # resize
 python resize_for_gpt.py
+# 입력 지정 resize
+python resize_for_gpt.py --image my.jpg --mask my-mask-gpt.png
 # target size 지정 (규칙에 어긋나면 자동 최적화)
 python resize_for_gpt.py --size 1536x1024
 ```
